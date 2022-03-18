@@ -18,27 +18,41 @@ reddit = praw.Reddit(
 
 def generate_subreddits(user):
     redditor = reddit.redditor(user)
-    subreddits = dict()
 
-    search_comments(redditor, subreddits)
-    search_posts(redditor, subreddits)
-
-
-
+    # Merge both dictionaries together.
+    subreddits = search_comments(redditor) | search_posts(redditor)
     return subreddits
 
 
-def search_comments(redditor, subreddits):
-    return
+def search_comments(redditor):
+    subreddits = dict()
+    for comment in redditor.comments.new(limit=None):
+        # If comment is in a subreddit that is already listed, increase the count,
+        # otherwise create a new entry.
+        if comment in subreddits:
+            subreddits[comment.subreddit] += 1
+        else:
+            subreddits[comment.subreddit] = 1
+    return subreddits
 
-def search_posts(redditor, subreddits):
-    return
+def search_posts(redditor):
+    subreddits = dict()
+    return subreddits
+
+def test_main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('user', type=str)
+    args = parser.parse_args()
+
+    user = args.user
+    search_comments(reddit.redditor(user))
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('user', type=str, help='User to be checked')
-    parser.add_argument('amount', type=int, default=10, help='Amount of subreddits to be displayed')
-    parser.add_argument('search', type=str, default=None, help='Search for particular subreddit instead')
+    parser.add_argument('amount', type=int, default=10, nargs='?', help='Amount of subreddits to be displayed')
+    parser.add_argument('search', type=str, default=None, nargs='?', help='Search for particular subreddit instead')
     args = parser.parse_args()
 
     user = args.user
@@ -52,12 +66,14 @@ def main():
     else:
         sorted_tuples = sorted(subreddits.items(), key=lambda item: item[1])
         sorted_subreddits = {k: v for k, v in sorted_tuples}
+        subreddits_list = list(sorted_subreddits.keys())
 
         for i in range(amount):
-            subreddit = sorted_subreddits.keys()[i]
+            subreddit = subreddits_list[i].display_name
             print('{}: {} interactions\n'.format(subreddit, sorted_subreddits[subreddit]))
 
     return
 
 if __name__ == '__main__':
     main()
+    # test_main()

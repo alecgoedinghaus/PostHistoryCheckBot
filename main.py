@@ -17,27 +17,45 @@ reddit = praw.Reddit(
 )
 
 def generate_subreddits(user):
+    redditor = reddit.redditor(user)
     subreddits = dict()
-    
-    search_comments(user, subreddits)
-    search_posts(user, subreddits)
+
+    search_comments(redditor, subreddits)
+    search_posts(redditor, subreddits)
+
+
+
+    return subreddits
+
+
+def search_comments(redditor, subreddits):
     return
 
-
-def search_comments(user, subreddits):
-    return
-
-def search_posts(user, subreddits):
+def search_posts(redditor, subreddits):
     return
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('user', type=str, help='User to be checked')
+    parser.add_argument('amount', type=int, default=10, help='Amount of subreddits to be displayed')
+    parser.add_argument('search', type=str, default=None, help='Search for particular subreddit instead')
     args = parser.parse_args()
 
     user = args.user
+    amount = args.amount
+    search = args.search
 
-    generate_subreddits(user)
+    subreddits = generate_subreddits(user)
+
+    if search != None:
+        return (bool(search in subreddits))
+    else:
+        sorted_tuples = sorted(subreddits.items(), key=lambda item: item[1])
+        sorted_subreddits = {k: v for k, v in sorted_tuples}
+
+        for i in range(amount):
+            subreddit = sorted_subreddits.keys()[i]
+            print('{}: {} interactions\n'.format(subreddit, sorted_subreddits[subreddit]))
 
     return
 

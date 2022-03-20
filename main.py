@@ -1,12 +1,13 @@
 import os
 import praw
+import prawcore
 import argparse
+
+DEBUG = True
 
 client_id = os.environ['PERSONAL_USE_SCRIPT']
 client_secret = os.environ['SECRET']
 user_agent = os.environ['USER_AGENT']
-
-DEBUG = True
 
 reddit = praw.Reddit(
     client_id=client_id,
@@ -21,6 +22,14 @@ def debug_print(message):
 def generate_subreddits(user):
     redditor = reddit.redditor(user)
 
+    # Make sure username is a valid account
+    try:
+        redditor.id
+    except prawcore.exceptions.NotFound:
+        print('Error: user {} not found'.format(user))
+        exit(-1)
+
+    debug_print('Generating subreddits...')
     comment_subs = search_comments(redditor)
     post_subs = search_posts(redditor)
 
@@ -33,6 +42,7 @@ def generate_subreddits(user):
         subreddits_to_append = post_subs
 
     # Merge both dictionaries together.
+    debug_print('Merging post and comment history...')
     for subreddit in subreddits_to_append:
         if subreddit in subreddits:
             subreddits[subreddit] += subreddits_to_append[subreddit]
@@ -41,9 +51,8 @@ def generate_subreddits(user):
 
     return subreddits
 
-
 def search_comments(redditor):
-    debug_print('Searching through all comments')
+    debug_print('Searching through all comments...')
 
     subreddits = dict()
     for comment in redditor.comments.new(limit=None):
@@ -58,7 +67,7 @@ def search_comments(redditor):
     return subreddits
 
 def search_posts(redditor):
-    debug_print('Searching through all posts')
+    debug_print('Searching through all posts...')
 
     subreddits = dict()
     for post in redditor.submissions.new(limit=None):
@@ -72,32 +81,29 @@ def search_posts(redditor):
 
     return subreddits
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('user', type=str, help='User to be checked')
+    parser.add_argument('-n', '--nsfw', type=bool, default=False, nargs='?', help='Filter for NSFW subreddits only')
     parser.add_argument('-a', '--amount', type=int, default=10, nargs='?', help='Amount of subreddits to be displayed')
     parser.add_argument('-s', '--search', type=str, default=None, nargs='?', help='Search for particular subreddit instead')
-    parser.add_argument('-n', '--nsfw', type=bool, default=False, nargs='?', help='Filter for NSFW subreddits only')
     args = parser.parse_args()
 
     user = args.user
+    nsfw = args.nsfw
     amount = args.amount
     search = args.search
-    nsfw = args.nsfw
 
     # MAKE SORT BY NSFW POSTS
-    # ERROR CHECK TO MAKE SURE USERNAME EXISTS
 
     # Dictionary containing {subreddit : number of interactions}
-    debug_print('Generating subreddits')
     subreddits = generate_subreddits(user)
 
     if search != None:
         return (bool(search in subreddits))
     else:
         # Sort dictionary by most interactions
-        debug_print('Sorting subreddits')
+        debug_print('Sorting subreddits...')
         sorted_tuples = sorted(subreddits.items(), key=lambda item: item[1], reverse=True)
         sorted_subreddits = {k: v for k, v in sorted_tuples}
         subreddits_list = list(sorted_subreddits.keys())

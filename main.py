@@ -29,10 +29,10 @@ def search_comments(redditor):
     for comment in redditor.comments.new(limit=None):
         # If comment is in a subreddit that is already listed, increase the count,
         # otherwise create a new entry.
-        if comment in subreddits:
-            subreddits[comment.subreddit] += 1
+        if comment.subreddit.display_name in subreddits:
+            subreddits[comment.subreddit.display_name] += 1
         else:
-            subreddits[comment.subreddit] = 1
+            subreddits[comment.subreddit.display_name] = 1
     return subreddits
 
 def search_posts(redditor):
@@ -59,18 +59,23 @@ def main():
     amount = args.amount
     search = args.search
 
+    # Dictionary containing {subreddit : number of interactions}
+    print('Generating subreddits')
     subreddits = generate_subreddits(user)
 
     if search != None:
         return (bool(search in subreddits))
     else:
-        sorted_tuples = sorted(subreddits.items(), key=lambda item: item[1])
+        # Sort dictionary by most interactions
+        print('Sorting subreddits')
+        sorted_tuples = sorted(subreddits.items(), key=lambda item: item[1], reverse=True)
         sorted_subreddits = {k: v for k, v in sorted_tuples}
         subreddits_list = list(sorted_subreddits.keys())
 
-        for i in range(amount):
-            subreddit = subreddits_list[i].display_name
-            print('{}: {} interactions\n'.format(subreddit, sorted_subreddits[subreddit]))
+        for i in range(min(len(subreddits_list), amount)):
+        # for i in range(len(subreddits_list)):
+            subreddit = subreddits_list[i]
+            print('{}{} interactions'.format((subreddit + ':').ljust(30), str(sorted_subreddits[subreddit]).ljust(5)))
 
     return
 

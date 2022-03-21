@@ -33,7 +33,7 @@ def generate_subreddits(user: str, nsfw: bool) -> dict:
     try:
         redditor.id
     except exceptions.NotFound:
-        print('Error: user {} not found'.format(user))
+        print('Error: u/{} not found'.format(user))
         exit(-1)
 
     debug_print('Generating subreddits...')
@@ -105,18 +105,12 @@ def main():
     if search != None:
         return bool(search in subreddits)
     else:
-        # Sort dictionary by most interactions
-        debug_print('Sorting subreddits...')
-        sorted_tuples = sorted(subreddits.items(), key=lambda item: item[1], reverse=True)
-        sorted_subreddits = {k: v for k, v in sorted_tuples}
-        subreddits_list = list(sorted_subreddits.keys())
-
-        # change to: for subreddit in ... then slice list for min of two values
-        for i in range(min(len(subreddits_list), amount)):
-            subreddit = subreddits_list[i]
-            print('{} {}{} interactions'.format((str(i + 1) + '.').ljust(5),
-                                                (subreddit + ':').ljust(30),
-                                                str(sorted_subreddits[subreddit]).ljust(5)))
+        sorted_subreddits = subreddits.most_common()
+        for subreddit in sorted_subreddits[:min(len(sorted_subreddits), amount)]:
+            print('{}{} interactions'.format(
+                (subreddit[0] + ':').ljust(22),
+                str(subreddit[1]).ljust(len(str(sorted_subreddits[0][1])))
+            ))
 
 if __name__ == '__main__':
     main()

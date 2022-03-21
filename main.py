@@ -1,8 +1,7 @@
-from collections import Counter
 import os
-from xml.dom import NotFoundErr
-from praw import Reddit
+from praw import Reddit, models
 from prawcore import exceptions
+from collections import Counter
 from argparse import ArgumentParser
 
 DEBUG = True
@@ -21,13 +20,14 @@ def debug_print(message):
     if DEBUG:
         print(message)
 
-def generate_subreddits(user, nsfw):
+def generate_subreddits(user: str, nsfw: bool) -> dict:
     '''
     Gather all subreddits the user has commented and posted in,
     and merge the two counters together.
     '''
 
     redditor = reddit.redditor(user)
+    # redditor._fetch()
 
     # Make sure username is a valid account
     try:
@@ -40,33 +40,23 @@ def generate_subreddits(user, nsfw):
     comment_subs = search_comments(redditor, nsfw)
     post_subs = search_posts(redditor, nsfw)
 
-    # Choose the smaller dictionary to iterate through for efficiency
-    if len(post_subs) >= len(comment_subs):
-        subreddits = post_subs
-        subreddits_to_append = comment_subs
-    else:
-        subreddits = comment_subs
-        subreddits_to_append = post_subs
-
-    # Merge both dictionaries together.
     debug_print('Merging post and comment history...')
-    for subreddit in subreddits_to_append:
-        if subreddit in subreddits:
-            subreddits[subreddit] += subreddits_to_append[subreddit]
-        else:
-            subreddits[subreddit] = subreddits_to_append[subreddit]
+    subreddits = Counter(comment_subs)
+    subreddits.update(post_subs)
 
     return subreddits
 
-def search_comments(redditor, nsfw):
+def search_comments(redditor: models.Redditor, nsfw: bool) -> dict:
     '''
     Iterate through all comments made by the user and count the subreddits
     '''
 
-    debug_print('Gathering all comments...')
+    debug_print('Fetching u/{}\'s comments...'.format(redditor))
+    print(type(redditor))
     comments = redditor.comments.new(limit=None)
 
     debug_print('Converting comments to subreddits...')
+    # this part is the weak link
     if nsfw:
         subreddit_names = [comment.subreddit.display_name for comment in comments if comment.subreddit.over18]
     else:
@@ -77,34 +67,22 @@ def search_comments(redditor, nsfw):
 
     return subreddits
 
-def search_posts(redditor, nsfw):
+def search_posts(redditor: models.Redditor, nsfw: bool) -> dict:
     '''
     Iterate through all posts made by the user and count the subreddits.
     '''
 
-    debug_print('Searching through all posts...')
+    debug_print('Fetching u/{}\'s posts...'.format(redditor))
+    posts = redditor.submissions.new(limit=None)
 
-    subreddits = dict()
-    for post in redditor.submissions.new(limit=None):
-        name = post.subreddit.display_name
+    debug_print('Converting posts to subreddits...')
+    if nsfw:
+        subreddit_names = [post.subreddit.display_name for post in posts if post.subreddit.over18]
+    else:
+        subreddit_names = [post.subreddit.display_name for post in posts]
 
-        debug_print('Found post in r/{}, adding to dictionary...'.format(name))
-
-        # If post is in a subreddit that is already listed, increase the count,
-        # otherwise create a new entry.
-        if nsfw:
-            if post.subreddit.over18:
-                if name in subreddits:
-                    subreddits[name] += 1
-                else:
-                    subreddits[name] = 1
-        else:
-            if name in subreddits:
-                subreddits[name] += 1
-            else:
-                subreddits[name] = 1
-
-        debug_print('Successfully added to dictionary...')
+    debug_print('Counting subreddits...')
+    subreddits = Counter(subreddit_names)
 
     return subreddits
 
@@ -125,7 +103,7 @@ def main():
     subreddits = generate_subreddits(user, nsfw)
 
     if search != None:
-        return (bool(search in subreddits))
+        return bool(search in subreddits)
     else:
         # Sort dictionary by most interactions
         debug_print('Sorting subreddits...')

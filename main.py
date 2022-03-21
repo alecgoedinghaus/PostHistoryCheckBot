@@ -94,22 +94,28 @@ def main():
     parser.add_argument('-s', '--search', type=str, default=None, nargs='?', help='Search for particular subreddit instead')
     args = parser.parse_args()
 
+    '''
+    IMPROVEMENTS:
+    - allow --amount to be none, which will then list all subreddits
+    - check if user begins with u/ and remove it if it does
+    - maybe allow for an option to split up posts and comments
+    '''
+
     user = args.user
     nsfw = args.nsfw
     amount = args.amount
     search = args.search
 
-    # Dictionary containing {subreddit : number of interactions}
-    subreddits = generate_subreddits(user, nsfw)
+    # Sorted list containing (subreddit, number of interactions)
+    subreddits = generate_subreddits(user, nsfw).most_common()
 
     if search != None:
         return bool(search in subreddits)
     else:
-        sorted_subreddits = subreddits.most_common()
-        for subreddit in sorted_subreddits[:min(len(sorted_subreddits), amount)]:
-            print('{}{} interactions'.format(
-                (subreddit[0] + ':').ljust(22),
-                str(subreddit[1]).ljust(len(str(sorted_subreddits[0][1])))
+        for subreddit in subreddits[:min(len(subreddits), amount)]:
+            print('{} {} interactions'.format(
+                (subreddit[0] + ':').ljust(len(max((x[0] for x in subreddits), key=len)) + 1),
+                str(subreddit[1]).ljust(len(str(subreddits[0][1])))
             ))
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+from distutils.log import debug
 import os
 from praw import Reddit, models
 from prawcore import exceptions
@@ -20,7 +21,7 @@ def debug_print(message):
     if DEBUG:
         print(message)
 
-def generate_subreddits(user: str, nsfw: bool) -> dict:
+def generate_subreddits(user: str, nsfw: bool) -> Counter:
     '''
     Gather all subreddits the user has commented and posted in,
     and merge the two counters together.
@@ -46,13 +47,12 @@ def generate_subreddits(user: str, nsfw: bool) -> dict:
 
     return subreddits
 
-def search_comments(redditor: models.Redditor, nsfw: bool) -> dict:
+def search_comments(redditor: models.Redditor, nsfw: bool) -> Counter:
     '''
     Iterate through all comments made by the user and count the subreddits
     '''
 
     debug_print('Fetching u/{}\'s comments...'.format(redditor))
-    print(type(redditor))
     comments = redditor.comments.new(limit=None)
 
     debug_print('Converting comments to subreddits...')
@@ -67,7 +67,7 @@ def search_comments(redditor: models.Redditor, nsfw: bool) -> dict:
 
     return subreddits
 
-def search_posts(redditor: models.Redditor, nsfw: bool) -> dict:
+def search_posts(redditor: models.Redditor, nsfw: bool) -> Counter:
     '''
     Iterate through all posts made by the user and count the subreddits.
     '''
@@ -97,7 +97,6 @@ def main():
     '''
     IMPROVEMENTS:
     - allow --amount to be none, which will then list all subreddits
-    - check if user begins with u/ and remove it if it does
     - maybe allow for an option to split up posts and comments
     '''
 
@@ -106,16 +105,37 @@ def main():
     amount = args.amount
     search = args.search
 
-    # Sorted list containing (subreddit, number of interactions)
-    subreddits = generate_subreddits(user, nsfw).most_common()
+    # Clean up username
+    if 'u/' in user or '/u/' in user:
+        user = user.removeprefix('/')
+        user = user.removeprefix('u/')
+        print(user)
+
+    # Clean up subreddit
+    if 'r/' in search or '/r/' in search:
+        search = search.removeprefix('/')
+        search = search.removeprefix('r/')
+        print(search)
+
+    # Disregard other print statements for search mode
+    if search != None:
+        global DEBUG
+        DEBUG = False
+
+    # Dictionary containing {subreddit : number of interactions}
+    subreddits = generate_subreddits(user, nsfw)
 
     if search != None:
-        return bool(search in subreddits)
+        if search in subreddits:
+            print('u/{} has interacted with r/{} {} times.'.format(user, search, subreddits[search]))
+        else:
+            print('u/{} does not have any activity in r/{}.'.format(user, search))
     else:
-        for subreddit in subreddits[:min(len(subreddits), amount)]:
+        sorted_subreddits = subreddits.most_common()
+        for subreddit in sorted_subreddits[:min(len(sorted_subreddits), amount)]:
             print('{} {} interactions'.format(
-                (subreddit[0] + ':').ljust(len(max((x[0] for x in subreddits), key=len)) + 1),
-                str(subreddit[1]).ljust(len(str(subreddits[0][1])))
+                (subreddit[0] + ':').ljust(len(max((x[0] for x in sorted_subreddits), key=len)) + 1),
+                str(subreddit[1]).ljust(len(str(sorted_subreddits[0][1])))
             ))
 
 if __name__ == '__main__':

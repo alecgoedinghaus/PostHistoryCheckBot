@@ -1,4 +1,3 @@
-from distutils.log import debug
 import os
 from praw import Reddit, models
 from prawcore import exceptions
@@ -89,9 +88,9 @@ def search_posts(redditor: models.Redditor, nsfw: bool) -> Counter:
 def main():
     parser = ArgumentParser()
     parser.add_argument('user', type=str, help='User to be checked')
-    parser.add_argument('-n', '--nsfw', type=bool, default=False, nargs='?', help='Filter for NSFW subreddits only')
-    parser.add_argument('-a', '--amount', type=int, default=10, nargs='?', help='Amount of subreddits to be displayed')
-    parser.add_argument('-s', '--search', type=str, default=None, nargs='?', help='Search for particular subreddit instead')
+    parser.add_argument('-n', '--nsfw', action='store_true', help='Filter for NSFW subreddits only')
+    parser.add_argument('-a', '--amount', type=int, default=10, help='Amount of subreddits to be displayed')
+    parser.add_argument('-s', '--search', type=str, default=None, help='Search for particular subreddit instead')
     args = parser.parse_args()
 
     '''
@@ -109,18 +108,16 @@ def main():
     if 'u/' in user or '/u/' in user:
         user = user.removeprefix('/')
         user = user.removeprefix('u/')
-        print(user)
-
-    # Clean up subreddit
-    if 'r/' in search or '/r/' in search:
-        search = search.removeprefix('/')
-        search = search.removeprefix('r/')
-        print(search)
 
     # Disregard other print statements for search mode
     if search != None:
         global DEBUG
         DEBUG = False
+        
+        # Clean up subreddit
+        if 'r/' in search or '/r/' in search:
+            search = search.removeprefix('/')
+            search = search.removeprefix('r/')
 
     # Dictionary containing {subreddit : number of interactions}
     subreddits = generate_subreddits(user, nsfw)
